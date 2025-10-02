@@ -57,12 +57,67 @@ BedrockFlow is a modern, scalable chat application that seamlessly integrates AW
 
 - **Backend**: Phoenix LiveView with Elixir
 - **Frontend**: React with TypeScript and Vite
-- **AI Service**: AWS Bedrock (Claude 3 Sonnet, Haiku, Opus)
+- **AI Service**: AWS Bedrock or AWS Bedrock AgentCore (recommended)
+- **Models**: Claude 3 Sonnet, Haiku, Opus
 - **Protocol**: AG-UI compatible streaming protocol (https://docs.ag-ui.com)
 - **Communication**: Server-Sent Events (SSE) and WebSockets
 - **Database**: PostgreSQL (via Ecto)
 
+### Two Integration Options
+
+#### 1. AWS Bedrock AgentCore (Recommended)
+Managed service with zero infrastructure management, built-in memory, tools, and code interpreter.
+
+**Pros:**
+- Serverless scaling
+- Built-in memory management
+- Tool integration (APIs, Lambda, MCP)
+- Code interpreter & browser runtime
+- Observability & tracing
+
+**Use when:** Building production agents that need memory, tools, or advanced features.
+
+#### 2. Direct AWS Bedrock API (Legacy)
+Direct API calls to AWS Bedrock models.
+
+**Pros:**
+- Simple integration
+- Direct control
+- Lower complexity
+
+**Use when:** Simple chat interfaces without memory or tools.
+
 ## 🚀 Quick Start
+
+### Option A: AgentCore Setup (Recommended)
+
+```bash
+# 1. Install AgentCore toolkit
+curl -LsSf https://astral.sh/uv/install.sh | sh
+uv pip install bedrock-agentcore-starter-toolkit
+
+# 2. Create and deploy your agent (see docs/AGENTCORE_SETUP.md)
+agentcore deploy
+
+# 3. Set environment variables
+export AWS_ACCESS_KEY_ID=your_access_key
+export AWS_SECRET_ACCESS_KEY=your_secret_key
+export AWS_REGION=us-east-1
+export AGENTCORE_AGENT_ID=your-deployed-agent-id
+
+# 4. Clone and setup BedrockFlow
+git clone <your-repo-url>
+cd BedrockFlow
+mix deps.get
+mix ecto.create
+
+# 5. Install frontend and start
+cd frontend && npm install
+cd .. && mix phx.server  # Terminal 1
+cd frontend && npm run dev  # Terminal 2
+```
+
+### Option B: Direct Bedrock (Legacy)
 
 ```bash
 # 1. Clone the repository
@@ -83,17 +138,16 @@ cd frontend
 npm install
 
 # 5. Start both servers (in separate terminals)
-# Terminal 1 - Backend
-mix phx.server
-
-# Terminal 2 - Frontend
-cd frontend && npm run dev
+mix phx.server  # Terminal 1
+cd frontend && npm run dev  # Terminal 2
 ```
 
-Visit:
-- React Frontend: http://localhost:5173
-- Phoenix LiveView: http://localhost:4000/chat
-- API: http://localhost:4000/api/chat/stream
+### Access Points
+
+- **React Frontend**: http://localhost:5173
+- **Phoenix LiveView**: http://localhost:4000/chat
+- **AgentCore API**: http://localhost:4000/api/agentcore/stream
+- **Direct Bedrock API**: http://localhost:4000/api/chat/stream
 
 ## 📋 Prerequisites
 
@@ -141,7 +195,45 @@ npm run dev
 
 The React frontend will be available at `http://localhost:5173`
 
-## AWS Bedrock Configuration
+## 🤖 AWS Bedrock AgentCore Setup
+
+For detailed AgentCore setup instructions, see [docs/AGENTCORE_SETUP.md](docs/AGENTCORE_SETUP.md)
+
+### Quick AgentCore Setup
+
+```bash
+# 1. Install toolkit
+uv pip install bedrock-agentcore-starter-toolkit
+
+# 2. Create agent.py
+cat > agent.py << 'EOF'
+def invoke(payload):
+    import anthropic
+    import os
+
+    client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
+    prompt = payload.get("prompt", "Hello!")
+
+    message = client.messages.create(
+        model="claude-3-sonnet-20240229",
+        max_tokens=2048,
+        messages=[{"role": "user", "content": prompt}]
+    )
+
+    return {"result": message.content[0].text}
+EOF
+
+# 3. Deploy
+agentcore deploy
+
+# 4. Test
+agentcore invoke '{"prompt": "Hello!"}'
+
+# 5. Set environment variable
+export AGENTCORE_AGENT_ID=<your-agent-id-from-deployment>
+```
+
+## AWS Bedrock Configuration (Direct API)
 
 1. Ensure you have access to AWS Bedrock in your AWS account
 2. Request access to Claude models (e.g., `anthropic.claude-3-sonnet-20240229-v1:0`)
@@ -201,32 +293,66 @@ Required IAM permissions:
 └── mix.exs
 ```
 
-## API Endpoints
+## 🔌 API Endpoints
 
-### POST /api/chat/stream
+### POST /api/agentcore/stream (Recommended)
 
-Streams chat responses from AWS Bedrock.
+Streams chat responses from AWS Bedrock AgentCore with advanced features.
 
 **Request:**
 ```json
 {
   "messages": [
-    {
-      "role": "user",
-      "content": "Hello, how are you?"
-    }
+    {"role": "user", "content": "Hello!"}
+  ],
+  "session_id": "user-123",
+  "mode": "agent_runtime",
+  "enable_trace": false
+}
+```
+
+**Parameters:**
+- `messages` (required): Array of message objects with role and content
+- `session_id` (optional): Session ID for conversation continuity
+- `mode` (optional): `"agent_runtime"` (default) or `"custom_endpoint"`
+- `enable_trace` (optional): Enable tracing for debugging
+
+**Response:** Server-Sent Events stream
+```
+data: {"type":"chunk","content":"Hello! I'm Claude"}
+data: {"type":"chunk","content":", your AI assistant."}
+data: {"type":"done"}
+```
+
+**Features:**
+- ✅ Built-in memory and session management
+- ✅ Tool integration support
+- ✅ Code interpreter capabilities
+- ✅ Browser automation
+- ✅ Observability and tracing
+
+### POST /api/chat/stream (Legacy)
+
+Streams chat responses from direct AWS Bedrock API.
+
+**Request:**
+```json
+{
+  "messages": [
+    {"role": "user", "content": "Hello, how are you?"}
   ]
 }
 ```
 
 **Response:** Server-Sent Events stream
-
 ```
 data: {"type":"chunk","content":"Hello"}
 data: {"type":"chunk","content":"! I'm"}
 data: {"type":"chunk","content":" doing"}
 data: {"type":"done"}
 ```
+
+**Use when:** Simple chat without memory or advanced features.
 
 ## AG-UI Protocol Implementation
 

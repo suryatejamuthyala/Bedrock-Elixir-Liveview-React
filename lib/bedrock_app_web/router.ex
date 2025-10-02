@@ -26,6 +26,10 @@ defmodule BedrockAppWeb.Router do
   scope "/api", BedrockAppWeb do
     pipe_through :api
 
+    # Direct Bedrock API (legacy)
     post "/chat/stream", ChatController, :stream
+
+    # AWS Bedrock AgentCore (recommended)
+    post "/agentcore/stream", AgentCoreChatController, :stream
   end
 end
