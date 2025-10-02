@@ -4,6 +4,9 @@
 
 BedrockFlow is a modern, scalable chat application that seamlessly integrates AWS Bedrock's Claude models with Phoenix LiveView and React, implementing the AG-UI protocol for standardized agent communication.
 
+<img width="1400" height="732" alt="image" src="https://github.com/user-attachments/assets/f875665c-5154-4a38-860c-ff173dade6f8" />
+
+
 ## 🎯 Use Cases
 
 ### Enterprise & Business Applications
